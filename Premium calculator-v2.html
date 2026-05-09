@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jubilee Health — Underwriting Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Mulish:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0A0F1E; --bg2: #0F1628; --bg3: #141C35;
+  --panel: #1A2240; --panel2: #1E2850;
+  --border: rgba(100,140,255,0.12); --border2: rgba(100,140,255,0.22);
+  --accent: #4F8EF7; --accent2: #2DDBB4;
+  --gold: #F0C040; --gold2: #C8981A;
+  --red: #F05060; --muted: #6A7FA8;
+  --text: #E8EEFF; --text2: #A8B8D8; --white: #FFFFFF;
+  --radius: 12px;
+}
+body { font-family: 'Mulish', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+/* GATE */
+#gate { position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column; }
+.gate-card { background:var(--panel);border:1px solid var(--border2);border-radius:20px;padding:3rem 2.5rem;width:360px;text-align:center;position:relative;box-shadow:0 40px 80px rgba(0,0,0,0.5); }
+.gate-logo { display:inline-flex;align-items:center;justify-content:center;width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#1a3a8f,#0f2260);border:2px solid var(--accent);margin-bottom:1.25rem; }
+.gate-logo svg { width:34px;height:34px; }
+.gate-title { font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--white);margin-bottom:4px; }
+.gate-sub { font-size:12px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2rem; }
+.gate-input { width:100%;height:52px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;font-family:'Syne Mono',monospace;font-size:22px;letter-spacing:6px;color:var(--text);text-align:center;outline:none;transition:border-color .2s; }
+.gate-input:focus { border-color:var(--accent); }
+.gate-input.shake { animation:shake .35s;border-color:var(--red); }
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+.gate-err { font-size:12px;color:var(--red);height:16px;margin:8px 0 1rem; }
+.gate-btn { width:100%;height:50px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .18s; }
+.gate-btn:hover { background:#6aa0ff;transform:translateY(-1px); }
+.gate-classified { position:absolute;top:-12px;right:16px;background:var(--gold);color:#000;font-family:'Syne',sans-serif;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:1.5px;text-transform:uppercase; }
+
+/* APP */
+#app { display:none;min-height:100vh; }
+.topbar { background:var(--bg2);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 2rem;gap:1rem;position:sticky;top:0;z-index:50; }
+.topbar-logo { font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--white);display:flex;align-items:center;gap:10px;flex:1; }
+.topbar-logo span { color:var(--accent2); }
+.topbar-badge { font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:4px 12px;border-radius:20px;background:rgba(240,192,64,.15);border:1px solid rgba(240,192,64,.35);color:var(--gold); }
+.topbar-user { font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px; }
+.lock-btn { background:none;border:1px solid var(--border2);color:var(--muted);padding:5px 14px;border-radius:8px;font-family:'Mulish',sans-serif;font-size:12px;cursor:pointer;transition:all .15s; }
+.lock-btn:hover { border-color:var(--red);color:var(--red); }
+
+.layout { max-width:1120px;margin:0 auto;padding:2rem 1.5rem 4rem;display:grid;grid-template-columns:1fr 390px;gap:1.75rem;align-items:start; }
+.panel { background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden; }
+.panel-head { padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between; }
+.panel-title { font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted); }
+.panel-body { padding:1.5rem; }
+
+.scheme-row { display:flex;gap:6px;background:var(--bg3);padding:5px;border-radius:10px;margin-bottom:1.5rem; }
+.sch-btn { flex:1;padding:8px;border:none;border-radius:7px;background:transparent;font-family:'Syne',sans-serif;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .18s; }
+.sch-btn.active { background:var(--accent);color:#fff; }
+
+.field { margin-bottom:1.1rem; }
+.field:last-child { margin-bottom:0; }
+label { display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:6px; }
+
+input[type="text"], input[type="number"], input[type="date"], input[type="password"], select, textarea {
+  width:100%;background:var(--bg3);border:1.5px solid var(--border2);border-radius:9px;
+  padding:0 12px;font-family:'Mulish',sans-serif;font-size:14px;color:var(--text);outline:none;transition:border-color .15s;
+}
+input[type="text"], input[type="number"], input[type="date"], input[type="password"], select { height:42px; }
+textarea { padding:10px 12px;resize:vertical;min-height:72px;line-height:1.5; }
+input:focus, select:focus, textarea:focus { border-color:var(--accent); }
+input.err, select.err { border-color:var(--red); }
+.field-row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.err-msg { font-size:11px;color:var(--red);margin-top:4px;display:none; }
+.err-msg.show { display:block; }
+.warn-msg { font-size:11px;color:var(--gold);margin-top:4px;display:none; }
+.warn-msg.show { display:block; }
+
+/* MEMBER CARDS */
+.mem-card { background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem;margin-bottom:10px;position:relative; }
+.mem-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px; }
+.mem-badge { font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;padding:3px 10px;border-radius:20px; }
+.mb-P { background:rgba(79,142,247,.18);color:#7aadff;border:1px solid rgba(79,142,247,.3); }
+.mb-S { background:rgba(45,219,180,.15);color:#2ddbb4;border:1px solid rgba(45,219,180,.3); }
+.mb-C { background:rgba(240,192,64,.15);color:var(--gold);border:1px solid rgba(240,192,64,.3); }
+.rem-btn { width:26px;height:26px;background:none;border:none;color:var(--muted);cursor:pointer;border-radius:6px;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .15s; }
+.rem-btn:hover { background:rgba(240,80,96,.15);color:var(--red); }
+.add-row { display:flex;gap:8px;margin-top:6px; }
+.add-btn { flex:1;height:38px;background:none;border:1.5px dashed var(--border2);border-radius:9px;font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s; }
+.add-btn:hover { border-color:var(--accent);color:var(--accent);background:rgba(79,142,247,.06); }
+.medex-flag { font-size:11px;color:var(--gold);background:rgba(240,192,64,.1);border:1px solid rgba(240,192,64,.25);border-radius:6px;padding:4px 8px;margin-top:6px;display:none; }
+.name-warn { font-size:11px;color:var(--gold);background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:6px;padding:4px 8px;margin-top:5px;display:none; }
+
+/* DOB / AGE TOGGLE */
+.dob-age-toggle { display:flex;gap:5px;background:var(--bg2);padding:3px;border-radius:7px;margin-bottom:7px; }
+.dat-btn { flex:1;height:26px;border:none;border-radius:5px;background:transparent;font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;letter-spacing:.5px;transition:all .15s; }
+.dat-btn.active { background:var(--accent2);color:#000; }
+
+.mem-prem-display { margin-top:7px;font-size:12px;color:var(--muted);background:var(--panel);border-radius:7px;padding:7px 10px;display:flex;justify-content:space-between; }
+.mem-prem-display span:last-child { font-family:'Syne Mono',monospace;color:var(--accent2);font-weight:600; }
+.tier-restrict-note { font-size:11px;color:rgba(79,142,247,.8);margin-top:4px;font-style:italic; }
+
+/* GEN BTN */
+.gen-btn { width:100%;height:50px;background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .18s;margin-top:1.5rem; }
+.gen-btn:hover { opacity:.88;transform:translateY(-1px); }
+
+/* RESULTS */
+.results-sticky { position:sticky;top:76px; }
+.amount-hero { text-align:center;padding:1.75rem 1.5rem 1.25rem;border-bottom:1px solid var(--border); }
+.amount-lbl { font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px; }
+.amount-val { font-family:'Syne Mono',monospace;font-size:38px;color:var(--accent2);line-height:1;margin-bottom:4px; }
+.amount-sub { font-size:12px;color:var(--muted); }
+.result-rows { padding:.75rem 1.5rem; }
+.r-row { display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px; }
+.r-row:last-child { border-bottom:none; }
+.r-lbl { color:var(--muted); }
+.r-val { font-family:'Syne Mono',monospace;font-size:12px;color:var(--text); }
+.flags-wrap { padding:.75rem 1.5rem;border-top:1px solid var(--border); }
+.flag { display:flex;gap:7px;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.5;margin-bottom:6px; }
+.flag:last-child { margin-bottom:0; }
+.flag-warn { background:rgba(240,192,64,.1);color:var(--gold);border:1px solid rgba(240,192,64,.22); }
+.flag-info { background:rgba(79,142,247,.1);color:#7aadff;border:1px solid rgba(79,142,247,.2); }
+.flag-ok   { background:rgba(45,219,180,.1);color:var(--accent2);border:1px solid rgba(45,219,180,.2); }
+
+/* EXPORT BUTTONS */
+.export-group { padding:.75rem 1.5rem 1.25rem;border-top:1px solid var(--border);display:none; }
+.export-group-title { font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px; }
+.export-row { display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px; }
+.exp-btn { height:38px;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px; }
+.exp-preview { background:var(--gold);color:#000; }
+.exp-preview:hover { background:#f5d060; }
+.exp-word { background:#2B579A;color:#fff; }
+.exp-word:hover { background:#3468b8; }
+.exp-pdf { background:#c0392b;color:#fff; }
+.exp-pdf:hover { background:#e04030; }
+.exp-excel { background:#1D6F42;color:#fff; }
+.exp-excel:hover { background:#247a4b; }
+
+.empty-state { text-align:center;padding:2.5rem 1.5rem;color:var(--muted);font-size:13px;line-height:1.7; }
+.empty-icon { font-size:36px;margin-bottom:10px;opacity:.4; }
+.mem-sum-card { background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:1rem;display:none; }
+
+/* CATEGORY CARDS */
+.cat-card { background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:1rem 1.1rem;margin-bottom:10px; }
+.cat-head { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px; }
+.cat-name-lbl { font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--accent2);letter-spacing:.2px; }
+.tier-grid { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px; }
+.tier-cell label { font-size:10px;letter-spacing:.5px;color:var(--muted);margin-bottom:4px; }
+.tier-cell input { height:36px;font-size:13px;background:var(--panel); }
+.tier-warning { font-size:11px;color:var(--red);background:rgba(240,80,96,.08);border:1px solid rgba(240,80,96,.2);border-radius:6px;padding:5px 9px;margin-top:8px;display:none; }
+
+/* BULK */
+.bulk-zone { background:var(--bg3);border:1.5px dashed var(--border2);border-radius:10px;padding:1rem 1.1rem;margin-top:10px; }
+.bulk-zone-title { font-family:'Syne',sans-serif;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
+.bulk-help { font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6; }
+.bulk-controls { display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:flex-end; }
+.bulk-controls select { flex:1;min-width:100px;height:36px;font-size:12px; }
+.bulk-parse-btn { height:36px;padding:0 16px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0; }
+.bulk-parse-btn:hover { background:#6aa0ff; }
+.bulk-feedback { font-size:11px;margin-top:6px;padding:5px 9px;border-radius:6px;display:none; }
+.bulk-feedback.ok { background:rgba(45,219,180,.1);color:var(--accent2);border:1px solid rgba(45,219,180,.2);display:block; }
+.bulk-feedback.err { background:rgba(240,80,96,.08);color:var(--red);border:1px solid rgba(240,80,96,.2);display:block; }
+
+/* DEBIT NOTE MODAL */
+@media print {
+  body * { visibility:hidden; }
+  #debit-note, #debit-note * { visibility:visible; }
+  #debit-note { position:fixed;inset:0;background:#fff;padding:0;margin:0; }
+  .dn-actions { display:none !important; }
+}
+#debit-note { display:none;position:fixed;inset:0;z-index:8888;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:2rem;overflow-y:auto; }
+#debit-note.open { display:flex; }
+.dn-backdrop { position:absolute;inset:0;cursor:pointer; }
+.dn-paper { position:relative;background:#fff;width:100%;max-width:720px;border-radius:4px;box-shadow:0 20px 80px rgba(0,0,0,.6);font-family:Verdana,Geneva,Tahoma,sans-serif;color:#111;overflow:hidden; }
+.dn-inner { padding:40px 48px 48px; }
+.dn-masthead { border-bottom:3px solid #003087;padding-bottom:18px;margin-bottom:24px; }
+.dn-company { font-size:18px;font-weight:700;color:#003087;margin-bottom:2px; }
+.dn-doc-type { font-size:22px;font-weight:700;color:#C8981A;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px; }
+.dn-tagline { font-size:10px;color:#666; }
+.dn-meta-grid { display:grid;grid-template-columns:1fr 1fr;gap:6px 2rem;font-size:11px;margin-bottom:20px; }
+.dn-meta-row { display:flex;flex-direction:column;gap:1px; }
+.dn-meta-lbl { color:#888;font-size:9.5px;text-transform:uppercase;letter-spacing:.5px; }
+.dn-meta-val { font-weight:700;color:#111;font-size:12px; }
+.dn-section-title { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#003087;border-bottom:1px solid #dde4f0;padding-bottom:5px;margin:20px 0 10px; }
+.dn-table { width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:8px; }
+.dn-table th { background:#003087;color:#fff;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:7px 10px;text-align:left; }
+.dn-table th:last-child, .dn-table td:last-child { text-align:right; }
+.dn-table td { padding:7px 10px;border-bottom:1px solid #eef0f6;font-size:11.5px;vertical-align:middle; }
+.dn-table tr:nth-child(even) td { background:#f8f9fc; }
+.dn-table .medex-cell { font-size:9.5px;color:#C8981A;font-style:italic; }
+.dn-totals { margin-top:12px;border:1.5px solid #003087;border-radius:4px;overflow:hidden; }
+.dn-total-row { display:flex;justify-content:space-between;align-items:center;padding:8px 14px;border-bottom:1px solid #dde4f0;font-size:12px; }
+.dn-total-row:last-child { border-bottom:none; }
+.dn-total-lbl { color:#555; }
+.dn-total-val { font-weight:700;color:#111; }
+.dn-total-row.highlight { background:#003087; }
+.dn-total-row.highlight .dn-total-lbl,
+.dn-total-row.highlight .dn-total-val { color:#fff;font-size:13.5px; }
+.dn-notes { margin-top:20px;background:#FFFBEF;border:1px solid #e8d88a;border-radius:4px;padding:10px 14px;font-size:10px;color:#7a6010;line-height:1.7; }
+.dn-sig { margin-top:28px;display:flex;justify-content:space-between;align-items:flex-end; }
+.dn-sig-block { font-size:11px; }
+.dn-sig-name { font-weight:700;font-size:12px;margin-bottom:2px; }
+.dn-sig-role { color:#555;font-size:10px; }
+.dn-sig-line { width:180px;border-bottom:1.5px solid #888;margin-bottom:4px;height:28px; }
+.dn-footer { margin-top:24px;padding-top:12px;border-top:1px solid #dde4f0;font-size:9px;color:#aaa;text-align:center;line-height:1.8; }
+.dn-actions { position:sticky;top:0;display:flex;gap:8px;padding:10px 14px;background:#003087;z-index:10;justify-content:flex-end; }
+.dn-act-btn { height:34px;padding:0 18px;border:none;border-radius:6px;font-family:Verdana,sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s; }
+.dn-print { background:#C8981A;color:#fff; }
+.dn-print:hover { background:#e0ad22; }
+.dn-close { background:rgba(255,255,255,.15);color:#fff; }
+.dn-close:hover { background:rgba(255,255,255,.25); }
+.dn-tentative { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:72px;font-weight:700;color:rgba(200,152,26,.10);white-space:nowrap;pointer-events:none;text-transform:uppercase;letter-spacing:8px;user-select:none; }
+</style>
+</head>
+<body>
+
+<!-- GATE -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-classified">Restricted Access</div>
+    <div class="gate-logo">
+      <svg viewBox="0 0 48 48" fill="none">
+        <path d="M24 4L6 14V26C6 35.4 14.1 44.2 24 46C33.9 44.2 42 35.4 42 26V14L24 4Z" fill="#1a3a8f" stroke="#4F8EF7" stroke-width="2"/>
+        <path d="M18 24l4 4 8-8" stroke="#2DDBB4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="gate-title">Underwriting Portal</div>
+    <div class="gate-sub">Jubilee Health Insurance</div>
+    <div style="position:relative;margin-bottom:1rem;">
+      <input type="password" class="gate-input" id="pwd-input" placeholder="••••••••" maxlength="20" onkeydown="if(event.key==='Enter')tryLogin()">
+    </div>
+    <div class="gate-err" id="gate-err"></div>
+    <button class="gate-btn" onclick="tryLogin()">Authenticate →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg width="26" height="26" viewBox="0 0 48 48" fill="none">
+        <path d="M24 4L6 14V26C6 35.4 14.1 44.2 24 46C33.9 44.2 42 35.4 42 26V14L24 4Z" fill="#1a3a8f" stroke="#4F8EF7" stroke-width="2"/>
+        <path d="M18 24l4 4 8-8" stroke="#2DDBB4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Jubilee Health &nbsp;<span>Underwriting</span>
+    </div>
+    <div class="topbar-badge">Internal — Restricted</div>
+    <div class="topbar-user">
+      <span id="uw-name-display">Underwriter</span>
+      <button class="lock-btn" onclick="lockApp()">Lock</button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+      <!-- Step 1 -->
+      <div class="panel" style="margin-bottom:1.5rem;">
+        <div class="panel-head"><span class="panel-title">Step 1 — Scheme &amp; Policy</span></div>
+        <div class="panel-body">
+          <div class="scheme-row">
+            <button class="sch-btn active" id="btn-micro" onclick="setScheme('MICRO')">Micro Scheme</button>
+            <button class="sch-btn" id="btn-sme" onclick="setScheme('SME')">SME Scheme</button>
+          </div>
+          <div class="field">
+            <label>Scheme / Group Name</label>
+            <input type="text" id="scheme-name" placeholder="e.g. Acacia Traders Ltd" oninput="clearRes()">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Policy Start Date</label>
+              <input type="date" id="start-date" oninput="clearRes()">
+              <div class="err-msg" id="err-start">Required.</div>
+            </div>
+            <div class="field">
+              <label>Transaction Date</label>
+              <input type="date" id="txn-date" oninput="clearRes()">
+              <div class="err-msg" id="err-txn">Required.</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Underwriter Name</label>
+            <input type="text" id="uw-name" placeholder="Full name" oninput="syncUwName();clearRes();">
+            <div class="err-msg" id="err-uw">Required.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="panel" style="margin-bottom:1.5rem;">
+        <div class="panel-head"><span class="panel-title">Step 2 — Category &amp; Tier Premiums</span></div>
+        <div class="panel-body">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.6;">
+            Enter the <strong style="color:var(--text);">annual premium</strong> for each tier.
+            Premiums should <strong style="color:var(--text);">decrease</strong> from Principal → +1 → +2 (dependent discounts). A flag appears if a tier is higher than the one before it.
+          </p>
+          <div style="display:flex;gap:8px;margin-bottom:1rem;align-items:flex-end;">
+            <div class="field" style="margin:0;flex:1;">
+              <label>Category Name</label>
+              <input type="text" id="cat-name-input" placeholder="e.g. Plan A, Bronze, Inpatient Only…" style="height:40px;">
+            </div>
+            <button onclick="addCategory()" style="height:40px;padding:0 18px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;">+ Add Category</button>
+          </div>
+          <div id="categories-list">
+            <p style="font-size:13px;color:var(--muted);text-align:center;padding:.5rem 0 .25rem;">No categories yet. Add one above.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="panel" style="margin-bottom:1.5rem;">
+        <div class="panel-head">
+          <span class="panel-title">Step 3 — Members</span>
+          <button style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;text-decoration:underline;" onclick="clearMembers()">Clear all</button>
+        </div>
+        <div class="panel-body">
+          <p style="font-size:12px;color:var(--muted);margin-bottom:1rem;line-height:1.6;">
+            <strong style="color:var(--text);">Principal tier</strong> is reserved for the Principal Member. Spouses and children use +1 or +2.
+            Enter age directly or use the <strong style="color:var(--text);">DOB calendar</strong> to calculate it automatically.
+          </p>
+          <div id="members-list">
+            <p style="font-size:13px;color:var(--muted);text-align:center;padding:1rem 0 .5rem;">Add members using the buttons below.</p>
+          </div>
+          <div class="add-row">
+            <button class="add-btn" onclick="addMember('PRINCIPAL')">+ Principal</button>
+            <button class="add-btn" onclick="addMember('SPOUSE')">+ Spouse</button>
+            <button class="add-btn" onclick="addMember('CHILD')">+ Child</button>
+          </div>
+
+          <!-- Bulk -->
+          <div class="bulk-zone" style="margin-top:14px;">
+            <div class="bulk-zone-title">⚡ Quick Bulk Add</div>
+            <div class="bulk-help">Paste comma-separated names. All will share the chosen relationship, category and tier.</div>
+            <div class="field" style="margin-bottom:8px;">
+              <label>Names (comma-separated)</label>
+              <textarea id="bulk-names" placeholder="John Kamau, Mary Wanjiru, Peter Otieno, …" rows="2"></textarea>
+            </div>
+            <div class="bulk-controls">
+              <div style="flex:1;min-width:100px;">
+                <label style="margin-bottom:4px;">Relationship</label>
+                <select id="bulk-type" style="height:36px;font-size:12px;" onchange="syncBulkTier()">
+                  <option value="SPOUSE">Spouse</option>
+                  <option value="CHILD">Child</option>
+                  <option value="PRINCIPAL">Principal</option>
+                </select>
+              </div>
+              <div style="flex:1;min-width:100px;">
+                <label style="margin-bottom:4px;">Category</label>
+                <select id="bulk-cat" style="height:36px;font-size:12px;">
+                  <option value="">— Select —</option>
+                </select>
+              </div>
+              <div style="flex:1;min-width:80px;">
+                <label style="margin-bottom:4px;">Tier</label>
+                <select id="bulk-tier" style="height:36px;font-size:12px;">
+                  <option value="M1">+1</option>
+                  <option value="M2">+2 (or more)</option>
+                </select>
+              </div>
+              <button class="bulk-parse-btn" onclick="bulkAdd()">Add →</button>
+            </div>
+            <div class="bulk-feedback" id="bulk-feedback"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="gen-btn" onclick="generate()">Generate Debit Note →</button>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="results-sticky">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Premium Summary</span>
+          <span id="scheme-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);color:#7aadff;font-family:'Syne',sans-serif;letter-spacing:.5px;text-transform:uppercase;">MICRO</span>
+        </div>
+        <div id="res-empty" class="empty-state">
+          <div class="empty-icon">📄</div>
+          Enter scheme details, add members, then click <strong>Generate Debit Note</strong>.
+        </div>
+        <div id="res-content" style="display:none;">
+          <div class="amount-hero">
+            <div class="amount-lbl">Total Payable (Prorated)</div>
+            <div class="amount-val" id="res-total">KES 0</div>
+            <div class="amount-sub" id="res-period">—</div>
+          </div>
+          <div class="result-rows">
+            <div class="r-row"><span class="r-lbl">Cover Period</span><span class="r-val" id="res-dates">—</span></div>
+            <div class="r-row"><span class="r-lbl">Days Remaining</span><span class="r-val" id="res-days">—</span></div>
+            <div class="r-row"><span class="r-lbl">Proration Method</span><span class="r-val" id="res-method">—</span></div>
+            <div class="r-row"><span class="r-lbl">Minimum (½ Annual)</span><span class="r-val" id="res-min">—</span></div>
+            <div class="r-row" style="background:rgba(45,219,180,.07);margin:0 -1.5rem;padding:8px 1.5rem;">
+              <span class="r-lbl" style="color:var(--text);font-weight:600;">Amount Payable</span>
+              <span class="r-val" style="color:var(--accent2);font-size:14px;" id="res-payable">—</span>
+            </div>
+          </div>
+          <div class="flags-wrap" id="flags-wrap"></div>
+          <!-- Export buttons -->
+          <div class="export-group" id="export-group">
+            <div class="export-group-title">Export Debit Note</div>
+            <div class="export-row">
+              <button class="exp-btn exp-preview" onclick="openDebitNote()">🖨 Preview</button>
+              <button class="exp-btn exp-word"    onclick="exportWord()">📝 Word</button>
+              <button class="exp-btn exp-pdf"     onclick="exportPDF()">📄 PDF</button>
+              <button class="exp-btn exp-excel"   onclick="exportExcel()">📊 Excel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mem-sum-card" id="mem-sum-card">
+        <div class="panel-head"><span class="panel-title">Per-Member Breakdown</span></div>
+        <div style="padding:.5rem 1.25rem 1rem;" id="mem-sum-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEBIT NOTE MODAL -->
+<div id="debit-note">
+  <div class="dn-backdrop" onclick="closeDebitNote()"></div>
+  <div class="dn-paper">
+    <div class="dn-actions">
+      <button class="dn-act-btn dn-close" onclick="closeDebitNote()">✕ Close</button>
+      <button class="dn-act-btn dn-print" onclick="window.print()">🖨 Print</button>
+    </div>
+    <div class="dn-tentative" id="dn-watermark">TENTATIVE</div>
+    <div class="dn-inner" id="dn-body"></div>
+  </div>
+</div>
+
+<script>
+// ======= PASSWORD =======
+const PASSWORD = '1277019';
+function tryLogin() {
+  const v = document.getElementById('pwd-input').value;
+  const errEl = document.getElementById('gate-err');
+  if (v === PASSWORD) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('txn-date').value = today;
+    document.getElementById('start-date').value = today;
+    renderCategories(); renderMembers(); refreshBulkCatDropdown();
+  } else {
+    errEl.textContent = 'Incorrect password.';
+    const inp = document.getElementById('pwd-input');
+    inp.classList.add('shake'); inp.value = '';
+    setTimeout(() => { inp.classList.remove('shake'); errEl.textContent = ''; }, 1200);
+  }
+}
+function lockApp() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('pwd-input').value = '';
+}
+
+// ======= STATE =======
+let scheme = 'MICRO';
+let categories = [];
+let members = [];
+let catCounter = 0, memberCounter = 0, lastResult = null;
+const RULES = {
+  MICRO: { maxAge:60, label:'Micro Scheme' },
+  SME:   { maxAge:80, medexAge:65, label:'SME Scheme' }
+};
+
+function setScheme(s) {
+  scheme = s;
+  document.getElementById('btn-micro').classList.toggle('active', s==='MICRO');
+  document.getElementById('btn-sme').classList.toggle('active', s==='SME');
+  const badge = document.getElementById('scheme-badge');
+  badge.textContent = s;
+  badge.style.background = s==='MICRO' ? 'rgba(79,142,247,.15)' : 'rgba(45,219,180,.12)';
+  badge.style.color = s==='MICRO' ? '#7aadff' : '#2ddbb4';
+  badge.style.borderColor = s==='MICRO' ? 'rgba(79,142,247,.3)' : 'rgba(45,219,180,.3)';
+  clearRes(); members.forEach(m => validateMember(m.id)); renderMembers();
+}
+
+function syncUwName() {
+  document.getElementById('uw-name-display').textContent = document.getElementById('uw-name').value || 'Underwriter';
+}
+
+// ======= CATEGORY TIER WARNINGS =======
+// Now warns if a later tier is HIGHER than an earlier tier (premiums should decrease)
+function getCatTierWarnings(cat) {
+  const m  = parseFloat(cat.pM)  || 0;
+  const m1 = parseFloat(cat.pM1) || 0;
+  const m2 = parseFloat(cat.pM2) || 0;
+  const w = [];
+  if (m > 0 && m1 > 0 && m1 > m)  w.push(`+1 (${m1.toLocaleString()}) is higher than Principal (${m.toLocaleString()}) — expected to decrease.`);
+  if (m1 > 0 && m2 > 0 && m2 > m1) w.push(`+2 (${m2.toLocaleString()}) is higher than +1 (${m1.toLocaleString()}) — expected to decrease.`);
+  if (m > 0 && m2 > 0 && m1 === 0 && m2 > m) w.push(`+2 (${m2.toLocaleString()}) is higher than Principal (${m.toLocaleString()}) — expected to decrease.`);
+  return w;
+}
+
+// ======= CATEGORIES =======
+function addCategory() {
+  const nameEl = document.getElementById('cat-name-input');
+  const name = nameEl.value.trim();
+  if (!name) { nameEl.classList.add('err'); nameEl.focus(); setTimeout(()=>nameEl.classList.remove('err'),1000); return; }
+  categories.push({ id:++catCounter, name, pM:'', pM1:'', pM2:'' });
+  nameEl.value = '';
+  renderCategories(); renderMembers(); refreshBulkCatDropdown(); clearRes();
+}
+
+function removeCategory(id) {
+  categories = categories.filter(c=>c.id!==id);
+  members = members.filter(m=>m.catId!==id);
+  renderCategories(); renderMembers(); refreshBulkCatDropdown(); clearRes();
+}
+
+function updateCatPremium(id, tier, val) {
+  const c = categories.find(x=>x.id===id);
+  if (c) { c[tier] = val; }
+  const wEl = document.getElementById('cat-tier-warn-'+id);
+  if (wEl && c) {
+    const w = getCatTierWarnings(c);
+    wEl.textContent = w.length ? '⚠ '+w.join(' ') : '';
+    wEl.style.display = w.length ? 'block' : 'none';
+  }
+  members.forEach(m=>{ if(m.catId===id) refreshMemberPremDisplay(m.id); });
+  clearRes();
+}
+
+function renderCategories() {
+  const el = document.getElementById('categories-list');
+  if (!categories.length) {
+    el.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:.5rem 0 .25rem;">No categories yet. Add one above.</p>';
+    return;
+  }
+  el.innerHTML = categories.map(c => {
+    const w = getCatTierWarnings(c);
+    return `
+    <div class="cat-card">
+      <div class="cat-head">
+        <span class="cat-name-lbl">${c.name}</span>
+        <button class="rem-btn" onclick="removeCategory(${c.id})" title="Remove">×</button>
+      </div>
+      <div class="tier-grid">
+        <div class="tier-cell">
+          <label>Principal — Annual (KES)</label>
+          <input type="number" placeholder="0" min="0" value="${c.pM}" oninput="updateCatPremium(${c.id},'pM',this.value)">
+        </div>
+        <div class="tier-cell">
+          <label>+1 — Annual (KES)</label>
+          <input type="number" placeholder="0" min="0" value="${c.pM1}" oninput="updateCatPremium(${c.id},'pM1',this.value)">
+        </div>
+        <div class="tier-cell">
+          <label>+2 — Annual (KES)</label>
+          <input type="number" placeholder="0" min="0" value="${c.pM2}" oninput="updateCatPremium(${c.id},'pM2',this.value)">
+        </div>
+      </div>
+      <div class="tier-warning" id="cat-tier-warn-${c.id}" style="${w.length?'display:block;':''}">
+        ${w.length?'⚠ '+w.join(' '):''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function getMemberAnnualPremium(m) {
+  if (!m.catId) return null;
+  const cat = categories.find(c=>c.id===m.catId);
+  if (!cat) return null;
+  const key = m.tier==='M' ? 'pM' : m.tier==='M1' ? 'pM1' : 'pM2';
+  const val = parseFloat(cat[key]);
+  return isNaN(val)||val<=0 ? null : val;
+}
+
+function refreshMemberPremDisplay(id) {
+  const m = members.find(x=>x.id===id);
+  const el = document.getElementById('prem-disp-'+id);
+  if (!el||!m) return;
+  const p = getMemberAnnualPremium(m);
+  el.innerHTML = `<span>Annual Premium</span><span>${p!==null?'KES '+Math.round(p).toLocaleString('en-KE'):'—'}</span>`;
+}
+
+// ======= MEMBERS =======
+function addMember(type) {
+  const defCat = categories.length===1 ? categories[0].id : '';
+  const defTier = type==='PRINCIPAL' ? 'M' : 'M1';
+  members.push({ id:++memberCounter, type, name:'', age:'', dob:'', useDob:false, catId:defCat, tier:defTier });
+  renderMembers();
+}
+
+function removeMember(id) { members=members.filter(m=>m.id!==id); renderMembers(); clearRes(); }
+function clearMembers() { members=[]; memberCounter=0; renderMembers(); clearRes(); }
+
+function updateMember(id, field, val) {
+  const m = members.find(x=>x.id===id);
+  if (!m) return;
+  if (field==='catId') { m.catId=parseInt(val)||''; }
+  else if (field==='tier') {
+    if (m.type==='PRINCIPAL') { m.tier='M'; return; }
+    if (val==='M' && m.type!=='PRINCIPAL') { m.tier='M1'; renderMembers(); clearRes(); return; }
+    m.tier = val;
+  } else { m[field]=val; }
+  if (field==='age') validateMember(id);
+  if (field==='dob') { calcAgeFromDob(id); }
+  if (field==='catId'||field==='tier') refreshMemberPremDisplay(id);
+  clearRes();
+}
+
+function toggleDobMode(id, useDob) {
+  const m = members.find(x=>x.id===id);
+  if (!m) return;
+  m.useDob = useDob;
+  renderMembers();
+}
+
+function calcAgeFromDob(id) {
+  const m = members.find(x=>x.id===id);
+  if (!m||!m.dob) return;
+  const dob = new Date(m.dob);
+  const today = new Date();
+  let age = today.getFullYear() - dob.getFullYear();
+  const mo = today.getMonth() - dob.getMonth();
+  if (mo < 0 || (mo===0 && today.getDate()<dob.getDate())) age--;
+  m.age = age >= 0 ? age : '';
+  validateMember(id);
+  refreshMemberPremDisplay(id);
+  // Update display of computed age
+  const ageDisp = document.getElementById('age-disp-'+id);
+  if (ageDisp) ageDisp.textContent = age >= 0 ? age + ' yrs' : '—';
+}
+
+function checkNameForNumbers(id) {
+  const m = members.find(x=>x.id===id);
+  const wEl = document.getElementById('name-warn-'+id);
+  if (!m||!wEl) return;
+  const hasNum = /\d/.test(m.name);
+  wEl.style.display = hasNum ? 'block' : 'none';
+}
+
+function renderMembers() {
+  const list = document.getElementById('members-list');
+  if (!members.length) {
+    list.innerHTML = '<p style="font-size:13px;color:var(--muted);text-align:center;padding:1rem 0 .5rem;">Add members using the buttons below.</p>';
+    return;
+  }
+  list.innerHTML = members.map(m => {
+    const cls = m.type==='PRINCIPAL'?'mb-P':m.type==='SPOUSE'?'mb-S':'mb-C';
+    const lbl = m.type==='PRINCIPAL'?'Principal Member':m.type==='SPOUSE'?'Spouse':'Child / Dependent';
+    const agePH = m.type==='CHILD'?'0–25':'18–'+(scheme==='MICRO'?'60':'80');
+    const age = parseFloat(m.age);
+    const needsMedex = scheme==='SME'&&!isNaN(age)&&age>=65&&m.type!=='CHILD';
+    const prem = getMemberAnnualPremium(m);
+    const isPrincipal = m.type==='PRINCIPAL';
+    const tierOpts = isPrincipal
+      ? `<option value="M" selected>Principal</option>`
+      : `<option value="M1" ${m.tier==='M1'?'selected':''}>+1</option>
+         <option value="M2" ${m.tier==='M2'?'selected':''}>+2 (or more)</option>`;
+    const hasNum = /\d/.test(m.name);
+    const agePart = m.useDob ? `
+      <div style="position:relative;">
+        <input type="date" id="dob-${m.id}" value="${m.dob||''}"
+          onchange="members.find(x=>x.id===${m.id}).dob=this.value;calcAgeFromDob(${m.id});clearRes();"
+          style="height:38px;">
+        <div style="font-size:11px;color:var(--accent2);margin-top:4px;font-family:'Syne Mono',monospace;"
+          id="age-disp-${m.id}">${!isNaN(age)&&age>=0?age+' yrs':'Pick a date above'}</div>
+        <div class="err-msg${m.age!==''&&!isNaN(age)&&getAgeError(m)?' show':''}" id="err-mem-${m.id}">${getAgeError(m)||''}</div>
+      </div>` : `
+      <div>
+        <input type="number" id="age-${m.id}" placeholder="${agePH}" min="0" max="120"
+          value="${m.age}" oninput="members.find(x=>x.id===${m.id}).age=this.value;updateMember(${m.id},'age',this.value);" style="height:38px;">
+        <div class="err-msg" id="err-mem-${m.id}"></div>
+      </div>`;
+
+    return `
+    <div class="mem-card">
+      <div class="mem-head">
+        <span class="mem-badge ${cls}">${lbl}</span>
+        <button class="rem-btn" onclick="removeMember(${m.id})">×</button>
+      </div>
+      <div class="field" style="margin-bottom:8px;">
+        <label>Full Name</label>
+        <input type="text" placeholder="Proposer full name" value="${m.name}"
+          oninput="members.find(x=>x.id===${m.id}).name=this.value;checkNameForNumbers(${m.id});clearRes();" style="height:38px;">
+        <div class="name-warn" id="name-warn-${m.id}" style="${hasNum?'display:block;':''}">⚠ Name contains numbers — please verify this is correct.</div>
+      </div>
+      <div class="field-row" style="margin-bottom:8px;">
+        <div class="field" style="margin:0;">
+          <label style="margin-bottom:4px;">Age</label>
+          <div class="dob-age-toggle">
+            <button class="dat-btn${!m.useDob?' active':''}" onclick="toggleDobMode(${m.id},false)">Type Age</button>
+            <button class="dat-btn${m.useDob?' active':''}" onclick="toggleDobMode(${m.id},true)">Pick DOB</button>
+          </div>
+          ${agePart}
+        </div>
+        <div class="field" style="margin:0;">
+          <label>Tier</label>
+          <select onchange="updateMember(${m.id},'tier',this.value)" style="height:38px;" ${isPrincipal?'disabled':''}>
+            ${tierOpts}
+          </select>
+          ${isPrincipal?'<div class="tier-restrict-note">Locked to Principal tier.</div>':''}
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:6px;">
+        <label>Category</label>
+        <select onchange="updateMember(${m.id},'catId',this.value)" style="height:38px;">
+          <option value="">— Select category —</option>
+          ${categories.map(c=>`<option value="${c.id}" ${m.catId===c.id?'selected':''}>${c.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="mem-prem-display" id="prem-disp-${m.id}">
+        <span>Annual Premium</span>
+        <span>${prem!==null?'KES '+Math.round(prem).toLocaleString('en-KE'):'—'}</span>
+      </div>
+      ${needsMedex?`<div class="medex-flag" style="display:block;margin-top:7px;">⚠ Age ${age}: Medical Examination Required — estimate TENTATIVE</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function getAgeError(m) {
+  const age = parseFloat(m.age);
+  if (m.age===''||isNaN(age)) return '';
+  const rules = RULES[scheme];
+  if (m.type==='CHILD') {
+    if (age<0) return 'Min: 1 day old.';
+    if (age>25) return 'Max child age is 25 years.';
+  } else {
+    if (age<18) return 'Min age is 18 years.';
+    if (age>rules.maxAge) return `Max age for ${rules.label}: ${rules.maxAge} yrs.`;
+  }
+  return '';
+}
+
+function validateMember(id) {
+  const m = members.find(x=>x.id===id);
+  const errEl = document.getElementById('err-mem-'+id);
+  const ageEl = document.getElementById('age-'+id);
+  if (!m||!errEl) return true;
+  const msg = getAgeError(m);
+  errEl.textContent = msg;
+  errEl.classList.toggle('show', !!msg);
+  if (ageEl) ageEl.classList.toggle('err', !!msg);
+  return !msg;
+}
+
+// ======= HELPERS =======
+function fmtKes(n) { return 'KES '+Math.round(n).toLocaleString('en-KE'); }
+function fmtDate(d) { return d.toLocaleDateString('en-KE',{day:'2-digit',month:'short',year:'numeric'}); }
+function fmtDMY(d) {
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function clearRes() {
+  document.getElementById('res-empty').style.display='';
+  document.getElementById('res-content').style.display='none';
+  document.getElementById('mem-sum-card').style.display='none';
+  document.getElementById('export-group').style.display='none';
+  lastResult=null;
+}
+function prorateOne(annual, daysRem, total) {
+  const half = annual/2;
+  const halfDays = Math.floor(total/2);
+  return Math.max(daysRem>=halfDays ? (annual/total)*daysRem : half, half);
+}
+
+// ======= BULK =======
+function refreshBulkCatDropdown() {
+  const sel = document.getElementById('bulk-cat');
+  if (!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— Select —</option>' +
+    categories.map(c=>`<option value="${c.id}" ${String(c.id)===prev?'selected':''}>${c.name}</option>`).join('');
+}
+function syncBulkTier() {
+  const type = document.getElementById('bulk-type').value;
+  const tierSel = document.getElementById('bulk-tier');
+  if (type==='PRINCIPAL') {
+    tierSel.innerHTML = '<option value="M">Principal</option>';
+  } else {
+    tierSel.innerHTML = '<option value="M1">+1</option><option value="M2">+2 (or more)</option>';
+  }
+}
+function bulkAdd() {
+  const raw = document.getElementById('bulk-names').value.trim();
+  const type = document.getElementById('bulk-type').value;
+  const catId = parseInt(document.getElementById('bulk-cat').value)||'';
+  const tier = document.getElementById('bulk-tier').value;
+  const fb = document.getElementById('bulk-feedback');
+  if (!raw) { fb.textContent='Paste some names first.';fb.className='bulk-feedback err';return; }
+  const names = raw.split(',').map(n=>n.trim()).filter(n=>n.length>0);
+  if (!names.length) { fb.textContent='No valid names found.';fb.className='bulk-feedback err';return; }
+  const safeTier = type==='PRINCIPAL'?'M':tier==='M'?'M1':tier;
+  names.forEach(name=>{
+    members.push({id:++memberCounter,type,name,age:'',dob:'',useDob:false,catId,tier:safeTier});
+  });
+  document.getElementById('bulk-names').value='';
+  renderMembers(); clearRes();
+  const tLbl = safeTier==='M'?'Principal':safeTier==='M1'?'+1':'+2';
+  fb.textContent=`✓ Added ${names.length} member${names.length>1?'s':''} · ${type==='PRINCIPAL'?'Principal':type==='SPOUSE'?'Spouse':'Child'} · Tier ${tLbl}.`;
+  fb.className='bulk-feedback ok';
+  setTimeout(()=>{fb.className='bulk-feedback';},4000);
+}
+
+// ======= GENERATE =======
+function generate() {
+  const startVal = document.getElementById('start-date').value;
+  const txnVal   = document.getElementById('txn-date').value;
+  const uwVal    = document.getElementById('uw-name').value.trim();
+  let hasErr=false;
+  const check=(id,errId,cond)=>{
+    const el=document.getElementById(id),errEl=document.getElementById(errId);
+    if(cond){el.classList.add('err');errEl.classList.add('show');hasErr=true;}
+    else{el.classList.remove('err');errEl.classList.remove('show');}
+  };
+  check('start-date','err-start',!startVal);
+  check('txn-date','err-txn',!txnVal);
+  check('uw-name','err-uw',!uwVal);
+  if (!members.length){alert('Please add at least one member.');return;}
+  let memErr=false;
+  members.forEach(m=>{if(!validateMember(m.id))memErr=true;});
+  let missingCat=false;
+  members.forEach(m=>{if(!m.catId||getMemberAnnualPremium(m)===null)missingCat=true;});
+  if(hasErr||memErr)return;
+  if(missingCat){alert('All members must have a category with a valid premium for their tier.');return;}
+
+  const startDate=new Date(startVal), txnDate=new Date(txnVal);
+  const expiryDate=new Date(startDate); expiryDate.setDate(expiryDate.getDate()+364);
+  const totalDays=364;
+  const daysRemaining=Math.max(0,Math.round((expiryDate-txnDate)/86400000));
+
+  const memberResults=members.map(m=>{
+    const annualPrem=getMemberAnnualPremium(m);
+    const payable=prorateOne(annualPrem,daysRemaining,totalDays);
+    const age=parseFloat(m.age);
+    const needsMedex=scheme==='SME'&&!isNaN(age)&&age>=65&&m.type!=='CHILD';
+    const cat=categories.find(c=>c.id===m.catId);
+    return {...m,annualPrem,payable,age,needsMedex,catName:cat?cat.name:'—'};
+  });
+
+  const totalAnnual=memberResults.reduce((s,m)=>s+m.annualPrem,0);
+  const totalPayable=memberResults.reduce((s,m)=>s+m.payable,0);
+  const methodLabel=daysRemaining>=Math.floor(totalDays/2)?'Daily proration':'Flat half-premium';
+  const hasMedex=memberResults.some(m=>m.needsMedex);
+  const schemeName=document.getElementById('scheme-name').value.trim();
+  const today=new Date();
+  const invoiceNo='JHI-'+fmtDMY(today).replace(/\//g,'')+'-'+String(Date.now()).slice(-4);
+
+  lastResult={scheme,schemeName,startDate,expiryDate,txnDate,totalDays,daysRemaining,
+    totalAnnual,totalPayable,methodLabel,memberResults,hasMedex,uwName:uwVal,invoiceNo,today};
+
+  document.getElementById('res-empty').style.display='none';
+  document.getElementById('res-content').style.display='block';
+  document.getElementById('res-total').textContent=fmtKes(totalPayable);
+  document.getElementById('res-period').textContent=`${daysRemaining} of ${totalDays} days remaining`;
+  document.getElementById('res-dates').textContent=`${fmtDate(startDate)} – ${fmtDate(expiryDate)}`;
+  document.getElementById('res-days').textContent=`${daysRemaining} / ${totalDays} days`;
+  document.getElementById('res-method').textContent=methodLabel;
+  document.getElementById('res-min').textContent=fmtKes(totalAnnual/2);
+  document.getElementById('res-payable').textContent=fmtKes(totalPayable);
+
+  const flags=[];
+  if(daysRemaining<Math.floor(totalDays/2)){
+    flags.push({type:'warn',msg:'Past midpoint — flat half-premium applies.'});
+  } else {
+    flags.push({type:'ok',msg:`Prorated at ${((daysRemaining/totalDays)*100).toFixed(1)}% (${daysRemaining}/${totalDays} days).`});
+  }
+  if(hasMedex) flags.push({type:'warn',msg:'Members aged 65–80 require medex. Note marked TENTATIVE.'});
+  flags.push({type:'info',msg:'All figures tentative pending full declarations.'});
+  document.getElementById('flags-wrap').innerHTML=flags.map(f=>
+    `<div class="flag flag-${f.type}"><span>${f.type==='warn'?'⚠':f.type==='ok'?'✓':'ℹ'}</span><span>${f.msg}</span></div>`
+  ).join('');
+
+  document.getElementById('mem-sum-card').style.display='block';
+  document.getElementById('mem-sum-body').innerHTML=memberResults.map(m=>{
+    const tLbl=m.tier==='M'?'Principal':m.tier==='M1'?'+1':'+2';
+    return `<div class="r-row">
+      <span class="r-lbl">${m.name||(m.type==='PRINCIPAL'?'Principal':m.type==='SPOUSE'?'Spouse':'Child')} · ${m.catName} · ${tLbl}</span>
+      <span class="r-val" style="color:var(--accent2);">${fmtKes(m.payable)}</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('export-group').style.display='block';
+}
+
+// ======= DEBIT NOTE HTML BUILDER =======
+function buildDebitNoteHTML(r) {
+  const tierLabel=t=>t==='M'?'Principal':t==='M1'?'+1':'+2+';
+  const relLabel=type=>type==='PRINCIPAL'?'Principal Member':'';
+  const rows=r.memberResults.map((m,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td>${m.name||'—'}</td>
+      <td>${relLabel(m.type)}</td>
+      <td>${isNaN(m.age)?'—':m.age+' yrs'}${m.needsMedex?'<br><span class="medex-cell">⚠ Medex Required</span>':''}</td>
+      <td>${m.catName}</td>
+      <td>${tierLabel(m.tier)}</td>
+      <td style="text-align:right;">${Math.round(m.payable).toLocaleString('en-KE')}</td>
+    </tr>`).join('');
+  const notes=[
+    '• Cover Period: '+fmtDate(r.startDate)+' to '+fmtDate(r.expiryDate)+'.',
+    '• Proration: '+r.methodLabel+' ('+r.daysRemaining+' days remaining).',
+    r.hasMedex?'• ⚠ TENTATIVE: Members aged 65–80 require medical examination.':null,
+    '• All premiums tentative pending full scheme declarations.',
+    '• +2 tier rate applies to all family members beyond two dependants.'
+  ].filter(Boolean).join('<br>');
+  const isTent=r.hasMedex;
+  return `
+    <div class="dn-masthead">
+      <div class="dn-company">Jubilee Health Insurance Limited</div>
+      <div class="dn-doc-type">Debit Note</div>
+      <div class="dn-tagline">Group Health Insurance — ${r.scheme==='MICRO'?'Micro Scheme':'SME Scheme'}</div>
+    </div>
+    <div class="dn-meta-grid">
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Invoice Number</span><span class="dn-meta-val">${r.invoiceNo}</span></div>
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Date</span><span class="dn-meta-val">${fmtDMY(r.today)}</span></div>
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Scheme / Group Name</span><span class="dn-meta-val">${r.schemeName||'—'}</span></div>
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Scheme Type</span><span class="dn-meta-val">${r.scheme==='MICRO'?'Micro Scheme':'SME Scheme'}</span></div>
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Policy Start Date</span><span class="dn-meta-val">${fmtDMY(r.startDate)}</span></div>
+      <div class="dn-meta-row"><span class="dn-meta-lbl">Policy Expiry Date</span><span class="dn-meta-val">${fmtDMY(r.expiryDate)}</span></div>
+    </div>
+    <div class="dn-section-title">Member Schedule &amp; Premium Breakdown</div>
+    <table class="dn-table">
+      <thead><tr>
+        <th>#</th><th>Full Name</th><th>Relationship</th><th>Age</th>
+        <th>Category</th><th>Tier</th><th>Payable Premium (KES)</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="dn-totals">
+      <div class="dn-total-row highlight">
+        <span class="dn-total-lbl">TOTAL AMOUNT PAYABLE</span>
+        <span class="dn-total-val">KES ${Math.round(r.totalPayable).toLocaleString('en-KE')}</span>
+      </div>
+    </div>
+    <div class="dn-notes">${notes}</div>
+    <div class="dn-sig">
+      <div class="dn-sig-block">
+        <div class="dn-sig-line"></div>
+        <div class="dn-sig-name">${r.uwName}</div>
+        <div class="dn-sig-role">Underwriter — Jubilee Health Insurance Limited</div>
+      </div>
+      <div class="dn-sig-block" style="text-align:right;font-size:10px;color:#888;line-height:1.8;">
+        <div>Invoice: ${r.invoiceNo}</div>
+        <div>Date: ${fmtDMY(r.today)}</div>
+        <div style="color:#C8981A;font-weight:700;">${isTent?'TENTATIVE — PENDING MEDEX':'TENTATIVE — PENDING DECLARATIONS'}</div>
+      </div>
+    </div>
+    <div class="dn-footer">
+      Jubilee Health Insurance Limited | Registered in Kenya | IRA Licensed<br>
+      This document is computer-generated and is tentative pending full underwriting acceptance.
+    </div>`;
+}
+
+function openDebitNote() {
+  if (!lastResult) return;
+  document.getElementById('dn-watermark').style.display = lastResult.hasMedex ? 'block' : 'none';
+  document.getElementById('dn-body').innerHTML = buildDebitNoteHTML(lastResult);
+  document.getElementById('debit-note').classList.add('open');
+}
+function closeDebitNote() { document.getElementById('debit-note').classList.remove('open'); }
+
+// ======= EXPORT: WORD =======
+function exportWord() {
+  if (!lastResult) return;
+  const r = lastResult;
+  const tierLabel=t=>t==='M'?'Principal':t==='M1'?'+1':'+2+';
+  const relLabel=type=>type==='PRINCIPAL'?'Principal Member':'';
+  const rows = r.memberResults.map((m,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${m.name||'—'}</td><td>${relLabel(m.type)}</td>
+      <td>${isNaN(m.age)?'—':m.age+' yrs'}${m.needsMedex?' ⚠ Medex Required':''}</td>
+      <td>${m.catName}</td><td>${tierLabel(m.tier)}</td>
+      <td align="right">${Math.round(m.payable).toLocaleString('en-KE')}</td>
+    </tr>`).join('');
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+  <head><meta charset="UTF-8">
+  <style>
+    body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#111;}
+    h1{font-size:16pt;color:#003087;margin:0 0 2pt;}
+    h2{font-size:20pt;color:#C8981A;text-transform:uppercase;margin:0 0 4pt;letter-spacing:1pt;}
+    .tagline{font-size:9pt;color:#666;}
+    .divider{border-top:3pt solid #003087;margin:14pt 0;}
+    table.meta{width:100%;margin-bottom:14pt;}
+    table.meta td{font-size:9.5pt;padding:3pt 6pt 3pt 0;width:50%;}
+    .lbl{font-size:8pt;color:#888;text-transform:uppercase;display:block;}
+    .val{font-size:11pt;font-weight:bold;}
+    .sec-title{font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:.8pt;color:#003087;border-bottom:1pt solid #dde4f0;padding-bottom:4pt;margin:16pt 0 8pt;}
+    table.members{width:100%;border-collapse:collapse;font-size:10pt;}
+    table.members th{background:#003087;color:#fff;font-size:9pt;font-weight:bold;padding:6pt 8pt;text-align:left;}
+    table.members th:last-child,table.members td:last-child{text-align:right;}
+    table.members td{padding:6pt 8pt;border-bottom:1pt solid #eef0f6;}
+    table.members tr:nth-child(even) td{background:#f8f9fc;}
+    .total-box{border:1.5pt solid #003087;margin-top:10pt;}
+    .total-row{display:flex;justify-content:space-between;padding:7pt 12pt;border-bottom:1pt solid #dde4f0;font-size:11pt;}
+    .total-hl{background:#003087;color:#fff;font-size:12pt;font-weight:bold;padding:8pt 12pt;}
+    .notes{margin-top:14pt;background:#FFFBEF;border:1pt solid #e8d88a;padding:8pt 12pt;font-size:9pt;color:#7a6010;line-height:1.6;}
+    .sig-line{width:160pt;border-bottom:1pt solid #888;margin-bottom:4pt;height:22pt;}
+    .sig-name{font-size:11pt;font-weight:bold;}
+    .sig-role{font-size:9pt;color:#555;}
+    .footer{margin-top:20pt;padding-top:8pt;border-top:1pt solid #dde4f0;font-size:8pt;color:#aaa;text-align:center;}
+  </style>
+  </head><body>
+    <h1>Jubilee Health Insurance Limited</h1>
+    <h2>Debit Note</h2>
+    <div class="tagline">Group Health Insurance — ${r.scheme==='MICRO'?'Micro Scheme':'SME Scheme'}</div>
+    <div class="divider"></div>
+    <table class="meta"><tr>
+      <td><span class="lbl">Invoice Number</span><span class="val">${r.invoiceNo}</span></td>
+      <td><span class="lbl">Date</span><span class="val">${fmtDMY(r.today)}</span></td>
+    </tr><tr>
+      <td><span class="lbl">Scheme / Group Name</span><span class="val">${r.schemeName||'—'}</span></td>
+      <td><span class="lbl">Scheme Type</span><span class="val">${r.scheme==='MICRO'?'Micro Scheme':'SME Scheme'}</span></td>
+    </tr><tr>
+      <td><span class="lbl">Policy Start Date</span><span class="val">${fmtDMY(r.startDate)}</span></td>
+      <td><span class="lbl">Policy Expiry Date</span><span class="val">${fmtDMY(r.expiryDate)}</span></td>
+    </tr></table>
+    <div class="sec-title">Member Schedule &amp; Premium Breakdown</div>
+    <table class="members">
+      <thead><tr><th>#</th><th>Full Name</th><th>Relationship</th><th>Age</th><th>Category</th><th>Tier</th><th>Payable Premium (KES)</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <table style="width:100%;border:1.5pt solid #003087;margin-top:10pt;border-collapse:collapse;">
+      <tr style="background:#003087;"><td style="padding:8pt 12pt;color:#fff;font-size:12pt;font-weight:bold;">TOTAL AMOUNT PAYABLE</td>
+      <td style="padding:8pt 12pt;color:#fff;font-size:12pt;font-weight:bold;text-align:right;">KES ${Math.round(r.totalPayable).toLocaleString('en-KE')}</td></tr>
+    </table>
+    <div class="notes">
+      • Cover Period: ${fmtDate(r.startDate)} to ${fmtDate(r.expiryDate)}.<br>
+      • Proration: ${r.methodLabel} (${r.daysRemaining} days remaining).<br>
+      ${r.hasMedex?'• ⚠ TENTATIVE: Members aged 65–80 require medical examination.<br>':''}
+      • All premiums tentative pending full scheme declarations.<br>
+      • +2 tier rate applies to all family members beyond two dependants.
+    </div>
+    <br><table style="width:100%;"><tr>
+      <td style="width:50%;vertical-align:bottom;">
+        <div class="sig-line"></div>
+        <div class="sig-name">${r.uwName}</div>
+        <div class="sig-role">Underwriter — Jubilee Health Insurance Limited</div>
+      </td>
+      <td style="width:50%;text-align:right;vertical-align:bottom;font-size:9pt;color:#888;line-height:1.8;">
+        Invoice: ${r.invoiceNo}<br>Date: ${fmtDMY(r.today)}<br>
+        <span style="color:#C8981A;font-weight:bold;">${r.hasMedex?'TENTATIVE — PENDING MEDEX':'TENTATIVE — PENDING DECLARATIONS'}</span>
+      </td>
+    </tr></table>
+    <div class="footer">Jubilee Health Insurance Limited | Registered in Kenya | IRA Licensed<br>
+    This document is computer-generated and tentative pending full underwriting acceptance.</div>
+  </body></html>`;
+
+  const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `DebitNote_${r.invoiceNo}.doc`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ======= EXPORT: PDF =======
+function exportPDF() {
+  if (!lastResult) return;
+  // Open modal then trigger print
+  openDebitNote();
+  setTimeout(() => { window.print(); }, 600);
+}
+
+// ======= EXPORT: EXCEL =======
+function exportExcel() {
+  if (!lastResult) return;
+  const r = lastResult;
+  const tierLabel=t=>t==='M'?'Principal':t==='M1'?'+1':'+2+';
+  const relLabel=type=>type==='PRINCIPAL'?'Principal Member':'';
+
+  const wb = XLSX.utils.book_new();
+
+  // ---- HEADER INFO ----
+  const headerData = [
+    ['JUBILEE HEALTH INSURANCE LIMITED'],
+    ['DEBIT NOTE'],
+    ['Group Health Insurance — '+(r.scheme==='MICRO'?'Micro Scheme':'SME Scheme')],
+    [],
+    ['Invoice Number:', r.invoiceNo, '', 'Date:', fmtDMY(r.today)],
+    ['Scheme / Group:', r.schemeName||'—', '', 'Scheme Type:', r.scheme==='MICRO'?'Micro Scheme':'SME Scheme'],
+    ['Policy Start:', fmtDMY(r.startDate), '', 'Policy Expiry:', fmtDMY(r.expiryDate)],
+    [],
+    ['MEMBER SCHEDULE & PREMIUM BREAKDOWN'],
+    ['#','Full Name','Relationship','Age','Category','Tier','Payable Premium (KES)']
+  ];
+
+  const memberRows = r.memberResults.map((m,i) => [
+    i+1,
+    m.name||'—',
+    relLabel(m.type),
+    isNaN(m.age)?'—':m.age,
+    m.catName,
+    tierLabel(m.tier),
+    Math.round(m.payable)
+  ]);
+
+  const totalRow = ['','','','','','TOTAL AMOUNT PAYABLE', Math.round(r.totalPayable)];
+
+  const notesData = [
+    [],
+    ['NOTES:'],
+    ['• Cover Period: '+fmtDate(r.startDate)+' to '+fmtDate(r.expiryDate)+'.'],
+    ['• Proration: '+r.methodLabel+' ('+r.daysRemaining+' days remaining).'],
+    r.hasMedex ? ['• ⚠ TENTATIVE: Members aged 65–80 require medical examination.'] : null,
+    ['• All premiums tentative pending full scheme declarations.'],
+    ['• +2 tier rate applies to all family members beyond two dependants.'],
+    [],
+    ['Underwriter:', r.uwName],
+    ['Status:', r.hasMedex?'TENTATIVE — PENDING MEDEX':'TENTATIVE — PENDING DECLARATIONS']
+  ].filter(Boolean);
+
+  const allData = [...headerData, ...memberRows, [totalRow[0],totalRow[1],totalRow[2],totalRow[3],totalRow[4],totalRow[5],totalRow[6]], ...notesData];
+  const ws = XLSX.utils.aoa_to_sheet(allData);
+
+  // Column widths
+  ws['!cols'] = [{wch:5},{wch:28},{wch:18},{wch:8},{wch:16},{wch:12},{wch:22}];
+
+  // Merge title rows
+  const merge = (r1,c1,r2,c2)=>({s:{r:r1,c:c1},e:{r:r2,c:c2}});
+  ws['!merges'] = [merge(0,0,0,6),merge(1,0,1,6),merge(2,0,2,6),merge(8,0,8,6)];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Debit Note');
+  XLSX.writeFile(wb, `DebitNote_${r.invoiceNo}.xlsx`);
+}
+
+// ======= INIT =======
+document.addEventListener('DOMContentLoaded', ()=>{
+  renderCategories(); renderMembers(); refreshBulkCatDropdown();
+});
+</script>
+</body>
+</html>
